@@ -26,15 +26,25 @@ interface TaskDialogProps {
 
 export function TaskDialog({ open, onOpenChange, onSave, task }: TaskDialogProps) {
   const [formData, setFormData] = useState(
-    task || {
-      title: "",
-      description: "",
-      status: "todo",
-      priority: "medium",
-      assignedTo: "",
-      dueDate: "",
-      tags: "",
-    },
+    task
+      ? {
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          assignedTo: task.assigned_to || "",
+          dueDate: task.due_date || "",
+          tags: task.tags || "",
+        }
+      : {
+          title: "",
+          description: "",
+          status: "todo",
+          priority: "medium",
+          assignedTo: "",
+          dueDate: "",
+          tags: "",
+        },
   )
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -16,8 +16,8 @@ interface Task {
   description: string
   status: "todo" | "in-progress" | "review" | "done"
   priority: "low" | "medium" | "high"
-  assignedTo?: string
-  dueDate?: string
+  assigned_to?: string
+  due_date?: string
   tags?: string
 }
 
@@ -146,28 +146,28 @@ export function KanbanBoard({ tasks, onTaskClick, onTaskMove, onTaskDelete }: Ka
                         ))}
                     </div>
 
-                    {(task.assignedTo || task.dueDate) && (
+                    {(task.assigned_to || task.due_date) && (
                       <div className="space-y-1.5 pt-2 border-t">
-                        {task.assignedTo && (
+                        {task.assigned_to && (
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <User className="h-3 w-3" />
-                            <span>{task.assignedTo}</span>
+                            <span>{task.assigned_to}</span>
                           </div>
                         )}
-                        {task.dueDate && (
+                        {task.due_date && (
                           <div
                             className={cn(
                               "flex items-center gap-2 text-xs",
-                              isOverdue(task.dueDate) ? "text-destructive" : "text-muted-foreground",
+                              isOverdue(task.due_date) ? "text-destructive" : "text-muted-foreground",
                             )}
                           >
-                            {isOverdue(task.dueDate) ? (
+                            {isOverdue(task.due_date) ? (
                               <AlertCircle className="h-3 w-3" />
                             ) : (
                               <Calendar className="h-3 w-3" />
                             )}
-                            <span>{new Date(task.dueDate).toLocaleDateString("pt-BR")}</span>
-                            {isOverdue(task.dueDate) && <span className="font-medium">(Atrasada)</span>}
+                            <span>{new Date(task.due_date).toLocaleDateString("pt-BR")}</span>
+                            {isOverdue(task.due_date) && <span className="font-medium">(Atrasada)</span>}
                           </div>
                         )}
                       </div>
@@ -182,3 +182,4 @@ export function KanbanBoard({ tasks, onTaskClick, onTaskMove, onTaskDelete }: Ka
     </div>
   )
 }
+
