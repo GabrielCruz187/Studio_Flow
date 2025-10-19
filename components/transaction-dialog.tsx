@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -16,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { createBrowserClient } from "@/lib/supabase/client"
 
 interface TransactionDialogProps {
   open: boolean
@@ -25,6 +25,19 @@ interface TransactionDialogProps {
 }
 
 export function TransactionDialog({ open, onOpenChange, onSave, transaction }: TransactionDialogProps) {
+  const [clients, setClients] = useState<any[]>([])
+  const supabase = createBrowserClient()
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      const { data } = await supabase.from("clients").select("id, name").order("name")
+      setClients(data || [])
+    }
+    if (open) {
+      fetchClients()
+    }
+  }, [open])
+
   const [formData, setFormData] = useState(
     transaction || {
       type: "income",
@@ -32,14 +45,38 @@ export function TransactionDialog({ open, onOpenChange, onSave, transaction }: T
       category: "",
       description: "",
       date: new Date().toISOString().split("T")[0],
-      paymentMethod: "",
-      clientName: "",
+      payment_method: "",
+      client_id: null, // Updated default value to be a non-empty string
     },
   )
 
+  useEffect(() => {
+    if (transaction) {
+      setFormData({
+        ...transaction,
+        client_id: transaction.client_id || null, // Updated default value to be a non-empty string
+      })
+    } else {
+      setFormData({
+        type: "income",
+        amount: "",
+        category: "",
+        description: "",
+        date: new Date().toISOString().split("T")[0],
+        payment_method: "",
+        client_id: null, // Updated default value to be a non-empty string
+      })
+    }
+  }, [transaction])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave({ ...formData, amount: Number.parseFloat(formData.amount) })
+    const dataToSave = {
+      ...formData,
+      amount: Number.parseFloat(formData.amount),
+      client_id: formData.client_id || null,
+    }
+    onSave(dataToSave)
     onOpenChange(false)
   }
 
@@ -137,10 +174,10 @@ export function TransactionDialog({ open, onOpenChange, onSave, transaction }: T
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
+              <Label htmlFor="payment_method">Forma de Pagamento</Label>
               <Select
-                value={formData.paymentMethod}
-                onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
+                value={formData.payment_method}
+                onValueChange={(value) => setFormData({ ...formData, payment_method: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
@@ -158,13 +195,23 @@ export function TransactionDialog({ open, onOpenChange, onSave, transaction }: T
 
             {formData.type === "income" && (
               <div className="space-y-2">
-                <Label htmlFor="clientName">Cliente</Label>
-                <Input
-                  id="clientName"
-                  value={formData.clientName}
-                  onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                  placeholder="Nome do cliente"
-                />
+                <Label htmlFor="client_id">Cliente</Label>
+                <Select
+                  value={formData.client_id}
+                  onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={null}>Nenhum</SelectItem> {/* Updated value prop to be a non-empty string */}
+                    {clients.map((client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
