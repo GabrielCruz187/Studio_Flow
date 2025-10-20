@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -14,31 +13,58 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Upload, X } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { useRouter } from "next/navigation"
 
 interface GalleryDialogProps {
   trigger: React.ReactNode
   gallery?: any
-  onSave?: (data: any) => void
+  clients: any[]
+  onSave?: () => void
 }
 
-export function GalleryDialog({ trigger, gallery, onSave }: GalleryDialogProps) {
+export function GalleryDialog({ trigger, gallery, clients, onSave }: GalleryDialogProps) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [expiryDate, setExpiryDate] = useState<Date | undefined>(gallery?.expiryDate)
+  const [eventDate, setEventDate] = useState<Date | undefined>(
+    gallery?.event_date ? new Date(gallery.event_date) : undefined,
+  )
+  const [expiryDate, setExpiryDate] = useState<Date | undefined>(
+    gallery?.expiry_date ? new Date(gallery.expiry_date) : undefined,
+  )
   const [photos, setPhotos] = useState<File[]>([])
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setLoading(true)
+
     const formData = new FormData(e.currentTarget)
     const data = {
-      clientName: formData.get("clientName"),
-      eventType: formData.get("eventType"),
+      client_id: formData.get("client_id"),
+      event_type: formData.get("event_type"),
+      event_date: eventDate?.toISOString(),
       password: formData.get("password"),
-      expiryDate,
+      expiry_date: expiryDate?.toISOString(),
       description: formData.get("description"),
-      photos,
+      status: "active",
     }
-    onSave?.(data)
-    setOpen(false)
+
+    const url = gallery ? `/api/galleries/${gallery.id}` : "/api/galleries"
+    const method = gallery ? "PUT" : "POST"
+
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+
+    if (res.ok) {
+      setOpen(false)
+      onSave?.()
+      router.refresh()
+    }
+
+    setLoading(false)
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,18 +83,23 @@ export function GalleryDialog({ trigger, gallery, onSave }: GalleryDialogProps) 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="clientName">Cliente *</Label>
-              <Input
-                id="clientName"
-                name="clientName"
-                defaultValue={gallery?.clientName}
-                placeholder="Nome do cliente"
-                required
-              />
+              <Label htmlFor="client_id">Cliente *</Label>
+              <Select name="client_id" defaultValue={gallery?.client_id} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o cliente" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="eventType">Tipo de Evento *</Label>
-              <Select name="eventType" defaultValue={gallery?.eventType}>
+              <Label htmlFor="event_type">Tipo de Evento *</Label>
+              <Select name="event_type" defaultValue={gallery?.event_type} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
@@ -87,6 +118,20 @@ export function GalleryDialog({ trigger, gallery, onSave }: GalleryDialogProps) 
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
+              <Label>Data do Evento *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {eventDate ? format(eventDate, "PPP", { locale: ptBR }) : "Selecione uma data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar mode="single" selected={eventDate} onSelect={setEventDate} initialFocus />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="password">Senha de Acesso *</Label>
               <Input
                 id="password"
@@ -97,20 +142,21 @@ export function GalleryDialog({ trigger, gallery, onSave }: GalleryDialogProps) 
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label>Data de Expiração</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {expiryDate ? format(expiryDate, "PPP", { locale: ptBR }) : "Selecione uma data"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Data de Expiração</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {expiryDate ? format(expiryDate, "PPP", { locale: ptBR }) : "Selecione uma data"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={expiryDate} onSelect={setExpiryDate} initialFocus />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="space-y-2">
@@ -156,10 +202,12 @@ export function GalleryDialog({ trigger, gallery, onSave }: GalleryDialogProps) 
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit">{gallery ? "Salvar Alterações" : "Criar Galeria"}</Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Salvando..." : gallery ? "Salvar Alterações" : "Criar Galeria"}
+            </Button>
           </div>
         </form>
       </DialogContent>
