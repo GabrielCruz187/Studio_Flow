@@ -1,4 +1,3 @@
-"use client"
 import { createServerClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { FinanceContent } from "@/components/finance-content"

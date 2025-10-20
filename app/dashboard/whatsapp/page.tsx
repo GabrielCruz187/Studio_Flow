@@ -1,4 +1,3 @@
-"use client"
 import { createServerClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { WhatsAppContent } from "@/components/whatsapp-content"
